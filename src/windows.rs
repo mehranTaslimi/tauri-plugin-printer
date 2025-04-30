@@ -39,7 +39,9 @@ pub fn get_printers() -> String {
     thread::spawn(move || {
         let output: Output = Command::new("powershell").args(["Get-Printer | Select-Object Name, DriverName, JobCount, PrintProcessor, PortName, ShareName, ComputerName, PrinterStatus, Shared, Type, Priority | ConvertTo-Json"]).output().unwrap();
 
-        sender.send(String::from_utf8(output.stdout)).unwrap();
+        sender
+            .send(String::from_utf8(output.stdout).unwrap())
+            .unwrap();
     });
 
     // Do other non-blocking work on the main thread
