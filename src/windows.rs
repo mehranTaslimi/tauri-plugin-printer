@@ -2,7 +2,7 @@
 use crate::{declare::PrintOptions, fsys::remove_file};
 use std::env;
 use std::fs::File;
-use std::process::Command;
+use std::process::{Command, Output};
 use std::thread;
 use std::{io::Write, sync::mpsc};
 /**
@@ -37,9 +37,9 @@ pub fn get_printers() -> String {
 
     // Spawn a new thread
     thread::spawn(move || {
-        let output: tauri::api::process::Output = Command::new("powershell").args(["Get-Printer | Select-Object Name, DriverName, JobCount, PrintProcessor, PortName, ShareName, ComputerName, PrinterStatus, Shared, Type, Priority | ConvertTo-Json"]).output().unwrap();
+        let output: Output = Command::new("powershell").args(["Get-Printer | Select-Object Name, DriverName, JobCount, PrintProcessor, PortName, ShareName, ComputerName, PrinterStatus, Shared, Type, Priority | ConvertTo-Json"]).output().unwrap();
 
-        sender.send(output.stdout.to_string()).unwrap();
+        sender.send(String::from_utf8(output.stdout)).unwrap();
     });
 
     // Do other non-blocking work on the main thread
@@ -55,7 +55,7 @@ pub fn get_printers() -> String {
  */
 pub fn get_printers_by_name(printername: String) -> String {
     let output = Command::new("powershell").args([format!("Get-Printer -Name \"{}\" | Select-Object Name, DriverName, JobCount, PrintProcessor, PortName, ShareName, ComputerName, PrinterStatus, Shared, Type, Priority | ConvertTo-Json", printername)]).output().unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
 
 /**
@@ -81,12 +81,14 @@ pub fn print_pdf(options: PrintOptions) -> String {
     println!("{}", shell_command);
     // Spawn a new thread
     thread::spawn(move || {
-        let output: tauri::api::process::Output = Command::new("powershell")
+        let output: Output = Command::new("powershell")
             .args([shell_command])
             .output()
             .unwrap();
 
-        sender.send(output.stdout.to_string()).unwrap();
+        sender
+            .send(String::from_utf8(output.stdout).unwrap())
+            .unwrap();
     });
 
     // Do other non-blocking work on the main thread
@@ -106,7 +108,7 @@ pub fn print_pdf(options: PrintOptions) -> String {
  */
 pub fn get_jobs(printername: String) -> String {
     let output = Command::new("powershell").args([format!("Get-PrintJob -PrinterName \"{}\"  | Select-Object DocumentName,Id,TotalPages,Position,Size,SubmmitedTime,UserName,PagesPrinted,JobTime,ComputerName,Datatype,PrinterName,Priority,SubmittedTime,JobStatus | ConvertTo-Json", printername)]).output().unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
 
 /**
@@ -114,7 +116,7 @@ pub fn get_jobs(printername: String) -> String {
  */
 pub fn get_jobs_by_id(printername: String, jobid: String) -> String {
     let output = Command::new("powershell").args([format!("Get-PrintJob -PrinterName \"{}\" -ID \"{}\"  | Select-Object DocumentName,Id,TotalPages,Position,Size,SubmmitedTime,UserName,PagesPrinted,JobTime,ComputerName,Datatype,PrinterName,Priority,SubmittedTime,JobStatus | ConvertTo-Json", printername, jobid)]).output().unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
 
 /**
@@ -128,7 +130,7 @@ pub fn resume_job(printername: String, jobid: String) -> String {
         )])
         .output()
         .unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
 
 /**
@@ -142,7 +144,7 @@ pub fn restart_job(printername: String, jobid: String) -> String {
         )])
         .output()
         .unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
 
 /**
@@ -156,7 +158,7 @@ pub fn pause_job(printername: String, jobid: String) -> String {
         )])
         .output()
         .unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
 
 /**
@@ -170,5 +172,5 @@ pub fn remove_job(printername: String, jobid: String) -> String {
         )])
         .output()
         .unwrap();
-    return output.stdout.to_string();
+    return String::from_utf8(output.stdout).unwrap();
 }
